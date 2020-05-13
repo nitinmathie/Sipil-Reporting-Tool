@@ -3,15 +3,134 @@ from django.shortcuts import render
 # Create your views here.
 from rest_framework import generics
 from .models import User
+from .models import OTP
 from .serializers import UserSerializer
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
+import random
+import requests
+#view level methods
+def gen_otp(phone):
+    if phone:        
+        key = random.randint(999,9999)
+        x = "https://2factor.in/API/R1/?module=TRANS_SMS&apikey=645207d0-9475-11ea-9fa5-0200cd936042&to=9493556678&from=sipilt&templatename=Sipil+OTP&var1="+str(phone)+"var2="+str(key) 
+        r = requests.get(x)
+        if r.status_code == 200:
+            return key
+        else:
+            return False
+    else:
+        return False
+@api_view(["POST"])
+def validate_otp(request):
+    if request.method=='POST':
+        ph=request.data.get('phoneNumber')
+        otp= request.data.get('otp')
+        if ph:
+            if otp:
+                phone=str(ph)
+                user = User.objects.filter(phone__iexact =phoneNumber)
+                recent_user = user.first()
+                key= recent_user.otp
+                if str(key)==str(otp):
+                    old.validated =True
+                    old.save()                    
+                    return Response({'status' : True})                    
+                else:
+                    return Response({'error':'Invalid OTP'})
+                
+            else:
+                return Response({'error':'OTP cannot be blank'})
+        else:
+            return Response({'error':'Internal server error'})
+        pass
+    else:
+        return Response({'error':'method not allowed'})
 # Create your views here.
+@api_view(["POST"])
+def signup_view(request):
+    if request.method == 'POST':
+        ph= request.data.get('phoneNumber')    
+        if ph:                    
+            phone=str(ph)
+            user = User.objects.filter(phoneNumber__iexact =phone)
+            if user.exists():
+                return Response({'status' : False,'detail': 'user with phonenumber already exists'})
+            else:
+                key = gen_otp(ph)
+                if key:
+                    old= OTP.objects.filter(phoneNumber__iexact = ph)
+                    if old.exists():
+                        old =old.first()
+                        count= old.count
+                        if count>10:
+                            return Response({'status':False,
+                                                         'detail':'Limit exceeded'})
+                        old.count =count+1
+                        old.save()
+                    else:
+                        
+                        OTP.objects.create(phoneNumber = ph, otp = key,counter=1, otpStatus = True)
+                        return Response({'status' : True,'detail': 'Success'})
+                             #send otp
+                            #save otp to verify          
+                else:
+                    return Response({'status' : False,'detail': 'Internal Server Error'})                        
+                                
+                           
+        else:
+            return Response({'status' : False,'detail': 'Enter Phone number'})                                    
+    else:
+        return Response({'status' : False,'detail': 'Request type not allowed'})
 @api_view(["POST"])
 def registration_view(request):
     if request.method == 'POST':
+        phone= request.data.get('phoneNumber',False)
+        password= request.data.get('password',False)
+        username = request.data.get('username')
+        firstName = request.data.get('firstName')
+        lastName = request.data.get('lastName')
+        add = request.data.get('address')
+        role = request.data.get('role')
+        siteName = request.data.get('siteName')
+        approval = request.data.get('approvalStatus')
+        if phone and password and username:
+            old= OTP.objects.filter(ph__iexact = phoneNumber)
+            if old.exists():
+                old =old.first()
+                otpStatus = old.otpStatus
+                if validated:
+                    temp_data = {
+                        'phoneNumber' : phone,
+                        'password' : password,
+                        'username' : username,
+                        'firstName' : firstName,
+                        'lastName' : lastName,
+                        'address' : add,
+                        'role' : role,
+                        'siteName' : siteName,
+                        'approvalStatus':approvalStatus
+                        }
+                    serializer = UserSerializer(data=temp_data)
+                    serializer.is_valid(raise_exception = True)
+                    user = serializer.save()
+                    old = delete()
+                    return response({'status' : True,
+                                     'detail' : ' Account created'
+                                     })
+                else:
+                    return Response({'status' : False,
+                                     'detail' : 'OTP has not been verified'})
+                
+            else:
+                return Response({
+                    'status' : False,
+                    'detail' : 'Verify Phone'
+            
+                    })
+            
         serializer = UserSerializer(data=request.data)
         data = {}
         if serializer.is_valid():
@@ -22,7 +141,8 @@ def registration_view(request):
         else:
             data = serializer.errors
         return Response(data)
-
+    else:
+        return Response({'error': 'Method not allowed'})
 @api_view(["POST"])
 def login_view(request):
     if request.method == 'POST':

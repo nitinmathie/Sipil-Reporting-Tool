@@ -1,8 +1,9 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import (User, Site, SiteActivity, SiteActivityType, Report, PipeLineDIA, MHDIA, UPVCDIA, ICChamber)
+from .models import (User, OTP, Site, SiteActivity, SiteActivityType, Report, PipeLineDIA, MHDIA, UPVCDIA, ICChamber)
 admin.site.register(User)
+admin.site.register(OTP)
 admin.site.register(Site)
 admin.site.register(SiteActivity)
 admin.site.register(SiteActivityType)
