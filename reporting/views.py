@@ -31,23 +31,23 @@ def validate_otp(request):
         if ph:
             if otp:
                 phone=str(ph)
-                user = User.objects.filter(phone__iexact =phoneNumber)
-                recent_user = user.first()
+                old = OTP.objects.filter(phoneNumber__iexact =phone)
+                recent_user = old.first()
                 key= recent_user.otp
                 if str(key)==str(otp):
                     old.validated =True
-                    old.save()                    
-                    return Response({'status' : True})                    
+                    old.update()                    
+                    return Response({'status' : True, 'detail':'success'})                    
                 else:
-                    return Response({'error':'Invalid OTP'})
+                    return Response({'error':'Invalid OTP', 'status':False})
                 
             else:
-                return Response({'error':'OTP cannot be blank'})
+                return Response({'error':'OTP cannot be blank','status':False})
         else:
-            return Response({'error':'Internal server error'})
+            return Response({'error':'Internal server error','status':False})
         pass
     else:
-        return Response({'error':'method not allowed'})
+        return Response({'error':'method not allowed', 'status': False})
 # Create your views here.
 @api_view(["POST"])
 def signup_view(request):
@@ -96,13 +96,16 @@ def registration_view(request):
         role = request.data.get('role')
         siteName = request.data.get('siteName')
         approval = request.data.get('approvalStatus')
+        userId = "SIPIL"+str(username[-3:])+str(phone[-3:0])
         if phone and password and username:
-            old= OTP.objects.filter(ph__iexact = phoneNumber)
+            old= OTP.objects.filter(phoneNumber__iexact = phone)
             if old.exists():
                 old =old.first()
                 otpStatus = old.otpStatus
-                if validated:
+                #old = delete()
+                if otpStatus:
                     temp_data = {
+                        'userId' : userId,
                         'phoneNumber' : phone,
                         'password' : password,
                         'username' : username,
@@ -111,13 +114,23 @@ def registration_view(request):
                         'address' : add,
                         'role' : role,
                         'siteName' : siteName,
-                        'approvalStatus':approvalStatus
+                        'approvalStatus':False
                         }
-                    serializer = UserSerializer(data=temp_data)
-                    serializer.is_valid(raise_exception = True)
-                    user = serializer.save()
-                    old = delete()
-                    return response({'status' : True,
+                    #serializer = UserSerializer(data=temp_data)
+                    #serializer.is_valid(raise_exception = True)
+                    #user = serializer.save()
+                    # old = delete()
+                    User.objects.create(userId = userId,
+                        phoneNumber = phone,
+                        password = password,
+                        username = username,
+                        firstName = firstName,
+                        lastName = lastName,
+                        address = add,
+                        role = role,
+                        siteName = siteName,
+                        approvalStatus=False)
+                    return Response({'status' : True,
                                      'detail' : ' Account created'
                                      })
                 else:

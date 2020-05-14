@@ -62,7 +62,7 @@ class OTP(models.Model):
     counter = models.IntegerField()    
     otpStatus = models.BooleanField(default=True)
     def __str__(self):
-        return "{} - {}".format(self.username, self.otp, self.counter, self.otpStatus)
+        return "{} - {}".format( self.otp, self.counter, self.otpStatus)
     
 #Sites Added by Admin model
 class Site(models.Model):

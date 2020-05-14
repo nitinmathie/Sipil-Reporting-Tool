@@ -7,13 +7,12 @@ from django.db import models
 from django.db.models import Q
 
 class UserSerializer(serializers.ModelSerializer):
-    password2 = serializers.CharField(style={}, write_only = True)
     class Meta:
         model = User
-        fields = ( 'username', 'phone',  'password',
-                  'firstName', 'lastName', 'address', 'role', 'site', 'approvalStatus')
+        fields = ( 'username', 'phoneNumber',  'password',
+                  'firstName', 'lastName', 'address', 'role', 'siteName', 'approvalStatus')
         extra_kwargs = {'password': {'write_only': True}}
-    def save(self, validated_data):
+    def create(self, validated_data):
         user = User.objects.create(**validated_data)        
         return user
 
