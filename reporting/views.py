@@ -15,7 +15,7 @@ import requests
 def gen_otp(phone):
     if phone:        
         key = random.randint(999,9999)
-        x = "https://2factor.in/API/R1/?module=TRANS_SMS&apikey=645207d0-9475-11ea-9fa5-0200cd936042&to=9493556678&from=sipilt&templatename=Sipil+OTP&var1="+str(phone)+"var2="+str(key) 
+        x = "https://2factor.in/API/R1/?module=TRANS_SMS&apikey=56874ee9-96ba-11ea-9fa5-0200cd936042&to=9493556678&from=SRANON&templatename=SMSTEMP&var1="+str(phone)+"&var2="+str(key)
         r = requests.get(x)
         if r.status_code == 200:
             return key
@@ -44,7 +44,7 @@ def validate_otp(request):
             else:
                 return Response({'error':'OTP cannot be blank','status':False})
         else:
-            return Response({'error':'Internal server error','status':False})
+            return Response({'error':'Phonenumber cannot be blank','status':False})
         pass
     else:
         return Response({'error':'method not allowed', 'status': False})
@@ -159,14 +159,96 @@ def registration_view(request):
 @api_view(["POST"])
 def login_view(request):
     if request.method == 'POST':
-        serializer = UserLoginSerializer(data=request.data)
-        data = {}
-        if serializer.is_valid():
-            user = serializer.save()
-            data['response'] = "Successfully logged in."            
+        username = request.data.get('username')
+        password = request.data.get('password')
+        #hashing check
+        if username and password:
+            username= str(username)            
+            user=User.objects.get(username__iexact=username)            
+            if user.exists:
+                pwd=user.password
+                if password==pwd:
+                    token = Token.objects.create(user=username)
+                    return Response({
+                    'status': True,
+                    'role': user.role,
+                    'approvedStatus' : user.approvedStatus,
+                    'siteName' : user.siteName,
+                    'token' : token
+                        })
+                else:
+                    return Response({
+            'status': False,
+            'detail' : 'password incorrect.'
+            })                                  
+            else:
+                  return Response({
+            'status': False,
+            'detail' : 'User does not exist.'
+            })
+                
         else:
-            data = serializer.errors
-        return Response(data)        
+            return Response({
+            'status': False,
+            'detail' : 'Enter username and password.'
+            })            
+    else:        
+        return Response({
+            'status': False,
+            'detail' : 'Method not allowed'
+            })
+@api_view(["GET"])
+def get_approvalCount():
+    if request.method == 'GET':
+        user=User.objects.get(approvalStatus=false)
+        countofuserapprovals=user.count()
+        #get count of user reports for now hardcode it to 0
+        countofreportapprovals=0
+        return Response({
+            'status' : True,
+            'pendinguserapprovals' :countofuserapprovals,
+            'pendingreportapprovals':countofreportapprovals
+
+            })
+    else:
+        return Response({
+            'status': False,
+            'detail' : 'Method not allowed'
+            })
+
+@api_view(["GET"])
+def get_users():
+    if request.method == 'GET':
+        user=User.objects.get(approvalStatus=false)
+        return JsonResponse(user, safe=False)        
+    else:
+        return Response({
+            'status': False,
+            'detail' : 'Method not allowed'
+            })
+
+@api_view(["PUT"])
+def update_userInfo(request):
+    if request.method == 'PUT':
+        username= request.data.get('username')
+        role= request.data.get('role')
+        siteName= request.data.get('siteName')
+        approvedStatus= request.data.get('approvedStatus')
+        username=str(username)
+        user=User.objects.get(username__iexact=username)
+        user.role=role
+        user.siteName= siteName
+        user.approvedStatus = approvedStatus
+        user.update()
+        return Response({
+            'status': True,
+            'detail' : 'userupdated'
+            })  
+    else:
+        return Response({
+            'status': False,
+            'detail' : 'Method not allowed'
+            })                
 @api_view(["POST"])
 def savesite(request):
     if request.method == 'POST':
